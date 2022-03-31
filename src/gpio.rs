@@ -41,8 +41,8 @@ pub trait EFM32Pin {
     #[cfg(not(feature = "unproven"))]
     type Output: digital::OutputPin;
     #[cfg(feature = "unproven")]
-    type Output: digital::OutputPin + digital::StatefulOutputPin;
-    type Input: digital::InputPin;
+    type Output: digital::v2::OutputPin + digital::v2::StatefulOutputPin;
+    type Input: digital::v2::InputPin;
 
     /// Convert the pin into an output pin. The original pin, however configured, is consumed, the
     /// hardware configuration changed to drive high or low, and returned as a pin that implements
@@ -73,14 +73,15 @@ macro_rules! gpio {
             use embedded_hal::digital;
             use core::marker::PhantomData;
             use super::*;
-
+ 
             $(
                 pub struct $PXi<Mode> {
                     pub(super) _mode: PhantomData<Mode>,
                 }
 
-                impl digital::OutputPin for $PXi<Output> {
-                    fn set_low(self: &mut Self) {
+                impl digital::v2::OutputPin for $PXi<Output> {
+                    type Error = ();
+                    fn set_low(self: &mut Self) -> Result<(), Self::Error> {
                         // This implementation uses bit-banding on all EFx32 devices. EFM2 would
                         // have explicit set/clear registers, but bit-banding is available there
                         // too and I don't expect any performance difference.
@@ -90,34 +91,39 @@ macro_rules! gpio {
                         // bit-band writing is atomic even though others might access the register
                         // simultaneously.
                         unsafe { bitband::change_bit(&gpio.$px_dout, $i, false); }
+                        Ok(())
                     }
 
-                    fn set_high(self: &mut Self) {
+                    fn set_high(self: &mut Self) -> Result<(), Self::Error> {
                         // see comments on set_low
                         let gpio = sneak_into_gpio();
                         unsafe { bitband::change_bit(&gpio.$px_dout, $i, true); }
+                        Ok(())
                     }
                 }
                 #[cfg(feature = "unproven")]
-                impl digital::StatefulOutputPin for $PXi<Output> {
-                    fn is_set_low(self: &Self) -> bool {
+                impl digital::v2::StatefulOutputPin for $PXi<Output> {
+                    
+                    fn is_set_low(self: &Self) -> Result<bool, ()> {
                         let gpio = sneak_into_gpio();
-                        gpio.$px_dout.read().bits() & (1 << $i) == 0
+                        Ok(gpio.$px_dout.read().bits() & (1 << $i) == 0)
+                        
                     }
 
-                    fn is_set_high(self: &Self) -> bool {
-                        !self.is_set_low()
+                    fn is_set_high(self: &Self) -> Result<bool, ()> {
+                        Ok(!self.is_set_low().unwrap())
                     }
                 }
                 #[cfg(feature = "unproven")]
-                impl digital::InputPin for $PXi<Input> {
-                    fn is_low(self: &Self) -> bool {
+                impl digital::v2::InputPin for $PXi<Input> {
+                    type Error = ();
+                    fn is_low(self: &Self) -> Result<bool, ()> {
                         let gpio = sneak_into_gpio();
-                        gpio.$px_din.read().bits() & (1 << $i) == 0
+                        Ok(gpio.$px_din.read().bits() & (1 << $i) == 0)
                     }
 
-                    fn is_high(self: &Self) -> bool {
-                        !self.is_low()
+                    fn is_high(self: &Self) -> Result<bool, ()> {
+                        Ok(!self.is_low().unwrap())
                     }
                 }
 

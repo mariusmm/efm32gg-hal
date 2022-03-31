@@ -15,7 +15,7 @@ repository = "https://github.com/chrysn/efm32gg-hal"
 # documentation = "https://docs.rs/efm32gg-hal" # only to be advertised when actually useful
 
 [dependencies]
-cortex-m = "0.5.2"
+cortex-m = "0.7.4"
 
 # version is a wild guess. dependency on unproven features should only be
 # present if own unproven feature is active (but how do i do that?).
@@ -27,8 +27,9 @@ embedded-hal = { version = "0.2.0", features = ["unproven"] }
 # generic as they can be with svd2rust. having bobbin will hopefully make this
 # even smoother.
 
-efm32gg990 = { version = "0.1.2", optional = true }
+efm32gg990 = { version = "0.1.3", optional = true }
 efr32xg1 = { version = "0.2.0", optional = true }
+
 
 [features]
 
